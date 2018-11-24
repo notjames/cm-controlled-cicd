@@ -42,13 +42,13 @@
   1. `cd .opspec/01-infrastructure/aws/bin`
   1. `export CLUSTER_ID=<some_cluster_name> \
         OS_TYPE=centos \
-        CLUSTER_TYPE=$cluster_type \
         AWS_DEFAULT_REGION=us-west-2 \
         AVAILABILITY_ZONE=us-west-2b \
         INSTANCE_TYPE=c4.large \
         $(./export_aws_creds) && \
         CLUSTER_PRIVATE_KEY=$(< $HOME/.ssh/${CLUSTER_ID}-Key.b64)`
   1. `for cluster_type in manager managed; do
+        CLUSTER_TYPE=$cluster_type
         (./make-cluster-nodes.sh &)
       done`
 
