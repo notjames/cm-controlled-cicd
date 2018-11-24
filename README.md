@@ -2,6 +2,7 @@
 # For AWS infrastructure
 * Requirements:
 ** You must already have valid AWS credentials set up and saved in your `$HOME/.aws/credentials`.
+** In a couple of the examples below, a variable is created by reading a private base64 encoded key. YOU DO NOT NEED TO CREATE THE KEY! If an error occurs because the key does not exist, you can safely ignore the error. The cloudformation stack create script will create a key based off the `$CLUSTER_ID`. In the event that you've created a stack with the same `$CLUSTER_ID`, the script will import that key to AWS. If the key doesn't exist, the script will have AWS create one and import it locally. Then the script will create a base64 encoded key from that private key minding proper permissions.
 
 ## Using [optctl](https://opctl.io/docs/getting-started/opctl.html)
 * `optctl` is currently the preferred method for creating these CF stacks. *NOTE* In the following example, `$CLUSTER_ID` was set as an environment variable:
@@ -24,23 +25,30 @@
   1. `for cluster_type in manager managed; do
         (docker run -v $PWD:/root \
                    -v $HOME/.ssh:/root/.ssh \
-              $(echo " OS_TYPE=centos CLUSTER_ID=$CLUSTER_ID AWS_DEFAULT_REGION=us-west-2 AVAILABILITY_ZONE=us-west-2b CLUSTER_USERNAME=centos INSTANCE_TYPE=c4.large CLUSTER_TYPE=$cluster_type $(bin/export_aws_creds)" | \
-                sed 's# # -e #g') \
-                      -it cm-cf-createstack:latest &)
+              $(echo " OS_TYPE=centos
+                       CLUSTER_ID=$CLUSTER_ID
+                       AWS_DEFAULT_REGION=us-west-2
+                       AVAILABILITY_ZONE=us-west-2b
+                       CLUSTER_USERNAME=centos
+                       INSTANCE_TYPE=c4.large
+                       CLUSTER_TYPE=$cluster_type
+                       $(bin/export_aws_creds)" | \
+                sed 's# \+# -e #g' \
+                      -i cm-cf-createstack:latest &)
       done`
 
 ## Use the script free from containerization
 * Note the following will create two cluster sets (manager and managed) in a subshell in parallel:
   1. `cd .opspec/01-infrastructure/aws/bin`
-  1. `for cluster_type in manager managed; do
-        CLUSTER_ID=<some_cluster_name> \
+  1. `export CLUSTER_ID=<some_cluster_name> \
         OS_TYPE=centos \
         CLUSTER_TYPE=$cluster_type \
         AWS_DEFAULT_REGION=us-west-2 \
         AVAILABILITY_ZONE=us-west-2b \
         INSTANCE_TYPE=c4.large \
         $(./export_aws_creds) && \
-        CLUSTER_PRIVATE_KEY=$(< $HOME/.ssh/${CLUSTER_ID}-Key.b64 2>/dev/null)
+        CLUSTER_PRIVATE_KEY=$(< $HOME/.ssh/${CLUSTER_ID}-Key.b64)`
+  1. `for cluster_type in manager managed; do
         (./make-cluster-nodes.sh &)
       done`
 

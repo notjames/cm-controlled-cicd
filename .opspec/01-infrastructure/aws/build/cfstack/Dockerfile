@@ -14,4 +14,4 @@ RUN DEBIAN_FRONTEND=noninteractive && \
     apt autoremove && apt autoclean && \
     apt purge -y python-pip
 
-CMD ["bash -c bin/make-cluster-nodes.sh"]
+CMD ["bin/make-cluster-nodes.sh"]
