@@ -1,0 +1,4 @@
+---
+awscreds: /home/jimconn/.aws
+mount_dot_ssh: /home/jimconn/.ssh
+mount_runroot: .opspec/01-infrastructure/aws/

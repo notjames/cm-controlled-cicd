@@ -1,0 +1,47 @@
+---
+name: 01-infrastructure/aws
+description: create the test infrastructure for manager and managed nodes in AWS
+inputs:
+  cluster_id:
+    string:
+      constraints: { minLength: 1 }
+      description: Name of the cluster
+  cluster_type:
+    string:
+      constraints: { enum: [ manager, managed ] }
+      description: Define if the cluster being created is a manager or managed cluster.
+  instance_type:
+    string:
+      constraints: { minLength: 1 }
+      description: Instance type. Reference CF template for more information.
+      default: c4.large
+  availability_zone:
+    string:
+      constraints: { minLength: 1 }
+      description: AWS AZ
+      default: us-west-2b
+  aws_default_region:
+    string:
+      constraints: { minLength: 1 }
+      description: default AWS region
+      default: us-west
+  os_type:
+    string:
+      constraints: { minLength: 1 }
+      default: centos
+  cluster_private_key:
+    file:
+      description: AWS used PEM (private) key for ssh access cluster-wide
+version: 0.0.1
+run:
+  serial:
+  - container:
+      image: { ref: 'alpine:latest' }
+      dirs:
+        /.aws: /home/jimconn/.aws
+      files:
+        /export_aws_creds: /home/jimconn/bin/export_aws_creds
+      cmd: [ /export_aws_creds ]
+      envVars:
+        AWS_ACCESS_KEY_ID:
+        AWS_SECRET_ACCESS_KEY:

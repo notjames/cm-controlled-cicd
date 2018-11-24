@@ -1,0 +1,123 @@
+#--
+name: 01-infrastructure/aws
+description: create the test infrastructure for manager and managed nodes in AWS
+inputs:
+  cluster_id:
+    string:
+      constraints: { minLength: 1 }
+      description: Name of the cluster
+  uid:
+    number:
+      constraints: { minimum: 0,
+                     maximum: 65536 }
+      description: The UID of the person running the script.
+  gid:
+    number:
+      constraints: { minimum: 0,
+                     maximum: 65536 }
+      description: The GID of the person running the script.
+  cluster_type:
+    string:
+      constraints: { enum: [ manager, managed ] }
+      description: Define if the cluster being created is a manager or managed cluster.
+  instance_type:
+    string:
+      constraints: { minLength: 1 }
+      description: Instance type. Reference CF template for more information.
+      default: c4.large
+  availability_zone:
+    string:
+      constraints: { minLength: 1 }
+      description: AWS AZ
+      default: us-west-2b
+  aws_default_region:
+    string:
+      constraints: { minLength: 1 }
+      description: default AWS region
+      default: us-west-2
+  instance_os_name:
+    string:
+      constraints: { minLength: 1 }
+      description: This a required parameter for the make-cluster-nodes script.
+      default: centos
+  instance_os_ver:
+    string:
+      constraints: { minLength: 1 }
+      description: This a required parameter for the make-cluster-nodes script.
+      default: "7.4"
+  os_type:
+    string:
+      constraints: { minLength: 1 }
+      default: centos
+  cluster_private_key:
+    string:
+      constraints: { minLength: 1 }
+      description: AWS used PEM (private) key for ssh access cluster-wide
+  awscreds:
+    dir:
+      description: AWS credentials directory
+  mount_dot_ssh:
+    dir:
+      description: Need to have the host $HOME/.ssh directory mounted
+  mount_runroot:
+    dir:
+      description: The running root of this project to be mounted to the container
+outputs:
+  aws_access_id:
+    string:
+#     constraints: { minLength: 1 }
+      description: exported AWS creds access id
+  aws_secret_key:
+    string:
+#     constraints: { minLength: 1 }
+      description: exported AWS creds access key
+version: 0.0.1
+run:
+  serial:
+  - container:
+      image: { ref: 'alpine:latest' }
+      dirs:
+        /root: $(mount_runroot)
+        /root/.aws: $(awscreds)
+      workDir: /root
+      stdOut:
+        AWS_ACCESS_KEY_ID=: aws_access_id
+        AWS_SECRET_ACCESS_KEY=: aws_secret_key
+      cmd:
+        - sh
+        - -ce
+        - |
+          apk update
+          apk add bash
+          bash bin/export_aws_creds | tr ' ' '\n'
+  - container:
+      image: { ref: 'ubuntu:bionic' }
+      dirs:
+        /root: $(mount_runroot)
+        /root/.ssh: $(mount_dot_ssh)
+      workDir: /root
+      envVars:
+        AWS_ACCESS_KEY_ID: $(aws_access_id)
+        AWS_SECRET_ACCESS_KEY: $(aws_secret_key)
+        CLUSTER_ID: $(cluster_id)
+        CLUSTER_TYPE: $(cluster_type)
+        CLUSTER_PRIVATE_KEY: $(cluster_private_key)
+        INSTANCE_TYPE: $(instance_type)
+        AVAILABILITY_ZONE: $(availability_zone)
+        AWS_DEFAULT_REGION: $(aws_default_region)
+        INSTANCE_OS_NAME: $(instance_os_name)
+        INSTANCE_OS_VER: $(instance_os_ver)
+        UID: $(uid)
+        GID: $(gid)
+      cmd:
+        - bash
+        - -ce
+        - |
+          DEBIAN_FRONTEND=noninteractive
+          apt update -y
+          apt install -y python-pip openssh-client wget gettext curl jq git
+          pip install awscli
+
+          #echo "$UID:$GID"
+          CLUSTER_ID="${CLUSTER_ID/manage[rd]/${CLUSTER_TYPE}}"
+          bin/make-cluster-nodes.sh
