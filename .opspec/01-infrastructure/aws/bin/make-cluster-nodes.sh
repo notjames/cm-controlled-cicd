@@ -217,9 +217,18 @@ else
   KEY_HOME="${KEY_HOME:-${HOME}/.ssh}"
 fi
 
-if ! echo "$CLUSTER_ID" | grep -Pq '^(manager|managed)'; then
-  echo >&2 '  $CLUSTER_ID must be prefixed with "manager" or "managed"'
-  exit 20
+# Be opinionated about where CLUSTER_TYPE should be
+# currently in the front. If it's in the end, remove it.
+if echo "$CLUSTER_ID" | grep -Pq '[-_]manage[rd]$'; then
+  CLUSTER_ID="$CLUSTER_TYPE-${CLUSTER_ID/[-_]manage[rd]$/}"
+fi
+
+# If CLUSTER_TYPE is not currently in the front, add it.
+if ! echo "$CLUSTER_ID" | grep -Pq '^manage[rd]'; then
+  CLUSTER_ID="${CLUSTER_TYPE}-${CLUSTER_ID}"
+else
+  # otherwise, if it's there, make sure it's correct
+  CLUSTER_ID="${CLUSTER_ID/^manage[rd][-_]/${CLUSTER_TYPE}-}"
 fi
 
 if ! get_key_material; then

@@ -119,5 +119,4 @@ run:
           pip install awscli
 
           #echo "$UID:$GID"
-          CLUSTER_ID="${CLUSTER_ID/manage[rd]/${CLUSTER_TYPE}}"
           bin/make-cluster-nodes.sh

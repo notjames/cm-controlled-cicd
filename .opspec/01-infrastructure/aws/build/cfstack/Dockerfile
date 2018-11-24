@@ -14,4 +14,4 @@ RUN DEBIAN_FRONTEND=noninteractive && \
     apt autoremove && apt autoclean && \
     apt purge -y python-pip
 
-CMD [ 'bash -c CLUSTER_ID="${CLUSTER_ID/manage[rd]/${CLUSTER_TYPE}}"',"&&","bin/make-cluster-nodes.sh"]
+CMD ["bash -c bin/make-cluster-nodes.sh"]
