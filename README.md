@@ -10,8 +10,6 @@
   1. `for cluster_type in manager managed; do
         (opctl run -a uid=$(id -u)
                    -a gid=$(id -g)
-                   -a instance_os_name=centos
-                   -a instance_os_ver=7.4
                    -a cluster_id=$CLUSTER_ID
                    -a cluster_private_key=~/.ssh/${CLUSTER_ID}-Key.b64
                    -a cluster_type=$cluster_type 01-infrastructure/aws &)
@@ -33,8 +31,6 @@
                        CLUSTER_USERNAME=centos
                        INSTANCE_TYPE=c4.large
                        CLUSTER_TYPE=$cluster_type
-                       INSTANCE_OS_NAME=centos
-                       INSTANCE_OS_VER=7.4
                        CLUSTER_PRIVATE_KEY=$(< $HOME/.ssh/${CLUSTER_ID}-Key.b64 2>/dev/null)
               $(bin/export_aws_creds)" | \
                 sed 's# # -e #g')
@@ -51,8 +47,6 @@
         AWS_DEFAULT_REGION=us-west-2 \
         AVAILABILITY_ZONE=us-west-2b \
         INSTANCE_TYPE=c4.large \
-        INSTANCE_OS_NAME=centos \
-        INSTANCE_OS_VER=7.4 \
         $(./export_aws_creds) && \
         CLUSTER_PRIVATE_KEY=$(< $HOME/.ssh/${CLUSTER_ID}-Key.b64 2>/dev/null)
         (./make-cluster-nodes.sh &)
