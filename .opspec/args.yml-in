@@ -1,0 +1,4 @@
+---
+awscreds: $HOME/.aws
+mount_dot_ssh: $HOME/.ssh
+mount_runroot: .opspec/01-infrastructure/aws/

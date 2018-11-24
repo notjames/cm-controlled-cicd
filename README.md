@@ -1,10 +1,17 @@
 
 # For AWS infrastructure
+* Requirements:
+** You must already have valid AWS credentials set up and saved in your `$HOME/.aws/credentials`.
 
-* During development, this is the way to start the two stacks in AWS Cloudformation using `optct` (preferred):
+* During development, this is the way to start the two stacks in AWS Cloudformation using `optctl` (preferred):
 ** In the following cases, CLUSTER_ID was set as an environment variable.
+  1. `envsubst '$HOME' < .opspec/args.yml-in > .opspec/args.yml`
   1. `for cluster_type in manager managed; do
-        (opctl run -a uid=$(id -u) -a gid=$(id -g) -a cluster_id=$CLUSTER_ID -a cluster_private_key=~/.ssh/${cluster_type}Key.b64 -a cluster_type=$cluster_type 01-infrastructure/aws &)
+        (opctl run -a uid=$(id -u)
+                   -a gid=$(id -g)
+                   -a cluster_id=$CLUSTER_ID
+                   -a cluster_private_key=~/.ssh/${cluster_type}Key.b64
+                   -a cluster_type=$cluster_type 01-infrastructure/aws &)
       done`
 
 * Or one can run the script manually. Note the following will create two cluster sets (manager and managed) in a subshell in parallel:
