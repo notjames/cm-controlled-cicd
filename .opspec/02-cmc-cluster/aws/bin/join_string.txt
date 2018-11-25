@@ -1,0 +1,1 @@
+kubeadm join 34.220.109.47:443 --token tjc6rf.5ly8dkjuy0vkbsre --discovery-token-ca-cert-hash sha256:5c9454e4ab4b347344801d9a1a5e7ccc5ac0fdbbd4b75dbcefeff9b6f4fb04b4

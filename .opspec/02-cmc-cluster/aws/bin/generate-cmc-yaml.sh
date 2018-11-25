@@ -23,6 +23,10 @@ get_managed_nodes()
     return 50
   }
 
+  if [[ $TEXT == 1 ]]; then
+    options='--output text'
+  fi
+
   q="Reservations[].Instances[]."
   q+="{"
   q+="  name:    Tags[? Key == 'Name'].Value | [0],"
@@ -33,20 +37,26 @@ get_managed_nodes()
   q+="  manager_nodes: [? contains(name, 'managed') && contains(name, 'work')]"
   q+="}"
 
+  # shellcheck disable=SC2086
   aws ec2 describe-instances \
-    --filter Name=instance-state-name,Values="running" \
-    --query "$q"
+    --filter "Name=instance-state-name,Values='running'" \
+    --query "$q" $options
 }
 
 get_manager_nodes()
 {
-  local cluster_id
+  local cluster_id options
 
+  options=""
   cluster_id=$1
+
+  if [[ $TEXT == 1 ]]; then
+    options='--output text'
+  fi
 
   [[ -z ${cluster_id} ]] && \
   {
-    err "Usage: get_managed_nodes(cluster_id)"
+    err "Usage: get_manager_nodes(cluster_id)"
     return 50
   }
 
@@ -60,9 +70,10 @@ get_manager_nodes()
   q+="  manager_nodes: [? contains(name, 'manager') && contains(name, 'work')]"
   q+="}"
 
+  # shellcheck disable=SC2086
   aws ec2 describe-instances \
-    --filter Name=instance-state-name,Values="running" \
-    --query "$q"
+    --filter "Name=instance-state-name,Values='running'" \
+    --query "$q" $options
 }
 
 #  {
@@ -168,6 +179,7 @@ OUTDIR=${BASEDIR}/out
 KUBELET_VERSION=${KUBELET_VERSION:-1.10.6}
 REQS=(aws yaml2json json2yaml jo jq)
 create_manifest=0
+TEXT=0
 
 create_cluster_yaml="$OUTDIR/create-$CLUSTER_ID.yaml"
 
@@ -184,6 +196,10 @@ while [[ "$#" -gt 0 ]]; do
     --get|-g)
       shift
       what_to_get=$1
+    ;;
+    --text|-t)
+      shift
+      TEXT=1
     ;;
     --help|-h)
       usage

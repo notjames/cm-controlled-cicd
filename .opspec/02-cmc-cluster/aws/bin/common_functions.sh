@@ -89,12 +89,6 @@ prune_kubeadm_env()
   fi
 }
 
-install_helm()
-{
-  curl -sL https://storage.googleapis.com/kubernetes-helm/helm-v${HelmVersion}-linux-amd64.tar.gz | \
-    tar zxf - linux-amd64/helm && sudo mv linux*/helm /usr/local/bin/helm
-}
-
 fix_kubelet_config()
 {
   config="/var/lib/kubelet/config.yaml"
@@ -333,7 +327,7 @@ configure_kubeadm()
     local:
       dataDir: /var/lib/etcd
       image:
-  kubernetesVersion: v${CONTROL_PLANE_VERSION}
+  kubernetesVersion: v${KUBELET_VERSION}
   token: ${TOKEN}
   kubeProxy:
     config:
@@ -377,9 +371,14 @@ run_kubeadm_master()
 
 run_kubeadm_join()
 {
-  sudo kubeadm join --token "${TOKEN}" "${MASTER}" --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification
+  #sudo kubeadm join --token "${TOKEN}" "${MASTER}" --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification
+  mkdir -p "$HOME"/.kube
+  sudo cp /etc/kubernetes/admin.conf "$HOME"/.kube
+  sudo chown -R "$(stat -c '%u:%g' "$HOME")" "$HOME"/.kube
+
+  eval "$*"
   for (( i = 0; i < 60; i++ )); do
-      sudo kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node $(hostname) machine=${MACHINE} && break
+      kubectl annotate --overwrite node $(hostname) machine=${MACHINE} && break
       sleep 1
   done
 }
@@ -431,4 +430,61 @@ teardown()
 
   sudo yum -y clean all
   sudo rm -rf /var/cache/yum
+}
+
+install_helm()
+{
+  curl -sL https://storage.googleapis.com/kubernetes-helm/helm-v${HELMVERSION}-linux-amd64.tar.gz | \
+    tar zxf - linux-amd64/helm && sudo mv linux*/helm /usr/local/bin/helm
+}
+
+install_cma_charts()
+{
+  __dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  helm init
+
+  CMA_NAMESPACE=${CMA_NAMESPACE:-cma}
+
+  if ! git clone https://github.com/samsung-cnct/vmware; then
+    echo >&2 "Unable to clone vmware repo."
+    return 1
+  fi
+
+  if cd vmware; then
+    # Create namespace
+    kubectl create ns ${CMA_NAMESPACE}
+
+    # Install cluster api
+    kubectl -n default -f ${__dir}/k8s/cma/clusterapi-apiserver.yaml
+    #kubectl -n default -f ${__dir}/k8s/cma/provider-components.yaml
+
+    # Install cma
+    helm --name cma-operator --namespace ${CMA_NAMESPACE} install ${__dir}/../charts/cma-operator
+    helm --name cma-vmware --namespace ${CMA_NAMESPACE} install ${__dir}/../charts/cma-vmware
+    helm --name cma --namespace ${CMA_NAMESPACE} install ${__dir}/../charts/cluster-manager-api
+  else
+    echo >&2 "Unable to chdir to cloned vmware repo."
+    return 1
+  fi
+
+  kubectl get all -n ${CMA_NAMESPACE}
+}
+
+install_provider_components()
+{
+  cd $HOME
+
+  if ! git clone https://github.com/samsung-cnct/cluster-api-provider-ssh; then
+    echo >&2 "Unable to clone cluster-api-provider-ssh"
+    return 1
+  fi
+
+  if ! cd cluster-api-provider-ssh/clusterctl/example/ssh; then
+    echo >&2 "Unable to chdir to generate provider-components.yaml"
+    return 1
+  fi
+
+  if ./generate-yaml.sh; then
+    kubectl -n default create -f provider-components.yaml
+  fi
 }
