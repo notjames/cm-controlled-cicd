@@ -372,14 +372,17 @@ run_kubeadm_master()
 run_kubeadm_join()
 {
   #sudo kubeadm join --token "${TOKEN}" "${MASTER}" --ignore-preflight-errors=all --discovery-token-unsafe-skip-ca-verification
+
+  IFS=" " read -r g g ipaddr targ token darg sha <<< "$*"
+  sudo kubeadm join "$targ" "$token" "$ipaddr" --ignore-preflight-errors=all "$darg" "$sha"
+
   mkdir -p "$HOME"/.kube
-  sudo cp /etc/kubernetes/admin.conf "$HOME"/.kube
+  sudo cp /etc/kubernetes/kubelet.conf "$HOME"/.kube/config
   sudo chown -R "$(stat -c '%u:%g' "$HOME")" "$HOME"/.kube
 
-  eval "$*"
   for (( i = 0; i < 60; i++ )); do
-      kubectl annotate --overwrite node $(hostname) machine=${MACHINE} && break
-      sleep 1
+    sudo kubectl --kubeconfig /etc/kubernetes/kubelet.conf annotate --overwrite node $(hostname) machine=${MACHINE} && break
+    sleep 1
   done
 }
 
@@ -434,10 +437,15 @@ teardown()
 
 install_helm()
 {
-  curl -sL https://storage.googleapis.com/kubernetes-helm/helm-v${HELMVERSION}-linux-amd64.tar.gz | \
+  local helm_version
+  helm_version=$1
+
+  curl -sL https://storage.googleapis.com/kubernetes-helm/helm-v${helm_version}-linux-amd64.tar.gz | \
     tar zxf - linux-amd64/helm && sudo mv linux*/helm /usr/local/bin/helm
 }
 
+# XXX FIXME
+# problem - vmware repo is private and cms-bootstrap quay repo is old.
 install_cma_charts()
 {
   __dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

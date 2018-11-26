@@ -8,9 +8,10 @@ KUBELET_VERSION=1.10.6
 OUTPUT_LOG="/var/log/startup.log"
 HELM_VERSION="2.11.0"
 
-export JOIN_STR_FILE KUBELET_VERSION SERVICE_CIDR POD_CIDR MASTER_IP CLUSTER_DNS_DOMAIN
+export JOIN_STR_FILE KUBELET_VERSION SERVICE_CIDR POD_CIDR \
+       MASTER_IP CLUSTER_DNS_DOMAIN HELM_VERSION
 
-if [[ -z $JOIN_STR ]];  then
+if [[ -z $JOIN_STR_FILE ]];  then
   echo >&2 "Cannot continue. The \$JOIN_STR was not supplied."
   exit 13
 else
@@ -52,12 +53,13 @@ if ! run_kubeadm_join "$JOIN_STR" | sudo tee -a $OUTPUT_LOG; then
   exit 20
 fi
 
-if ! install_helm | sudo tee -a $OUTPUT_LOG; then
+## XXX the following two expressions don't work 100% yet - jconner
+if ! install_helm $HELM_VERSION | sudo tee -a $OUTPUT_LOG; then
   echo >&2 "Unable to install helm."
   exit 22
 fi
 
-if ! install_cma_charts | tee -a $OUTPUT_LOG; then
+if ! install_cma_charts | sudo tee -a $OUTPUT_LOG; then
   echo >&2 "Charts installation failed."
   exit 23
 fi
